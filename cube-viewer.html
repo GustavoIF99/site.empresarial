@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cube Viewer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+
+body{
+    overflow:hidden;
+    background:#080c12;
+    font-family:'Inter',Arial,sans-serif;
+    color:white;
+    user-select:none;
+}
+
+/* LOADING SCREEN */
+.loader{
+    position:fixed;
+    inset:0;
+    background:#080c12;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    gap:20px;
+    z-index:9999;
+    transition:opacity 0.6s, visibility 0.6s;
+}
+.loader.hide{opacity:0;visibility:hidden;pointer-events:none;}
+.loader-cube{
+    width:50px;height:50px;
+    border:3px solid #2f7cff;
+    animation:spin3d 1.5s infinite linear;
+}
+@keyframes spin3d{
+    0%{transform:perspective(200px) rotateX(0) rotateY(0);}
+    100%{transform:perspective(200px) rotateX(360deg) rotateY(360deg);}
+}
+.loader-text{
+    font-family:'JetBrains Mono',monospace;
+    font-size:13px;
+    color:#4d8dff;
+    letter-spacing:3px;
+}
+
+/* CANVAS */
+canvas{
+    width:100vw;
+    height:100vh;
+    display:block;
+    cursor:grab;
+}
+canvas:active{cursor:grabbing;}
+
+/* PARTICLES CANVAS */
+#particles{
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    z-index:1;
+}
+
+/* GRID OVERLAY */
+.grid-overlay{
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    background-image:
+        linear-gradient(rgba(47,124,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(47,124,255,0.03) 1px, transparent 1px);
+    background-size:50px 50px;
+    z-index:2;
+}
+
+/* SIDEBAR */
+.sidebar{
+    position:fixed;
+    top:50%;
+    left:14px;
+    transform:translateY(-50%);
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    padding:8px;
+    background:rgba(12,16,24,0.7);
+    border:1px solid rgba(47,124,255,0.15);
+    border-radius:16px;
+    backdrop-filter:blur(16px);
+    z-index:20;
+}
+
+.icon{
+    width:44px;
+    height:44px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:12px;
+    cursor:pointer;
+    color:#8ea4c8;
+    background:transparent;
+    transition:all 0.25s cubic-bezier(.4,0,.2,1);
+    font-size:18px;
+    position:relative;
+}
+.icon:hover{
+    background:rgba(47,124,255,0.15);
+    color:white;
+    transform:scale(1.08);
+}
+.icon.active{
+    background:rgba(47,124,255,0.25);
+    color:#6cb6ff;
+    box-shadow:0 0 12px rgba(47,124,255,0.3);
+}
+
+/* TOOLTIP */
+.icon::after{
+    content:attr(data-tip);
+    position:absolute;
+    left:calc(100% + 12px);
+    top:50%;
+    transform:translateY(-50%) translateX(-6px);
+    background:rgba(12,16,24,0.95);
+    border:1px solid rgba(47,124,255,0.2);
+    color:#a0bfff;
+    font-size:12px;
+    font-weight:500;
+    letter-spacing:0.5px;
+    padding:6px 12px;
+    border-radius:8px;
+    white-space:nowrap;
+    opacity:0;
+    pointer-events:none;
+    transition:all 0.2s;
+    backdrop-filter:blur(8px);
+}
+.icon:hover::after{
+    opacity:1;
+    transform:translateY(-50%) translateX(0);
+}
+
+/* TITLE */
+.title{
+    position:fixed;
+    top:16px;
+    left:16px;
+    font-size:13px;
+    font-weight:600;
+    letter-spacing:3px;
+    color:rgba(255,255,255,0.7);
+    background:rgba(12,16,24,0.6);
+    padding:8px 14px;
+    border-radius:10px;
+    border:1px solid rgba(47,124,255,0.12);
+    backdrop-filter:blur(10px);
+    z-index:20;
+    display:flex;
+    align-items:center;
+    gap:8px;
+}
+.title-dot{
+    width:8px;height:8px;
+    border-radius:50%;
+    background:#2f7cff;
+    box-shadow:0 0 8px #2f7cff;
+    animation:pulse-dot 2s infinite;
+}
+@keyframes pulse-dot{
+    0%,100%{opacity:1;}
+    50%{opacity:0.4;}
+}
+
+/* HUD */
+.hud{
+    position:fixed;
+    right:18px;
+    bottom:18px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    color:#6cb6ff;
+    background:rgba(12,16,24,0.6);
+    padding:12px 16px;
+    border-radius:12px;
+    border:1px solid rgba(47,124,255,0.12);
+    backdrop-filter:blur(10px);
+    z-index:20;
+    line-height:1.8;
+}
+.hud-label{color:#4a6080;font-size:10px;}
+.hud-val{color:#9bc2ff;}
+
+/* ZOOM INDICATOR */
+.zoom-indicator{
+    position:fixed;
+    right:18px;
+    top:18px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    color:#6cb6ff;
+    background:rgba(12,16,24,0.6);
+    padding:8px 14px;
+    border-radius:10px;
+    border:1px solid rgba(47,124,255,0.12);
+    backdrop-filter:blur(10px);
+    z-index:20;
+}
+
+/* OVERLAY / BACKDROP */
+.overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.5);
+    backdrop-filter:blur(4px);
+    z-index:90;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 0.3s;
+}
+.overlay.show{opacity:1;pointer-events:auto;}
+
+/* PANEL BASE */
+.panel{
+    position:fixed;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%) scale(0.92);
+    max-width:480px;
+    width:90%;
+    max-height:85vh;
+    padding:28px;
+    border-radius:20px;
+    background:linear-gradient(180deg,rgba(8,16,36,0.97),rgba(4,8,20,0.97));
+    border:1.5px solid rgba(47,124,255,0.25);
+    box-shadow:0 0 40px rgba(0,100,255,0.15),0 0 80px rgba(0,60,180,0.08);
+    backdrop-filter:blur(20px);
+    color:white;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+    z-index:100;
+    opacity:0;
+    pointer-events:none;
+    transition:all 0.35s cubic-bezier(.4,0,.2,1);
+    overflow-y:auto;
+}
+.panel.show{
+    opacity:1;
+    pointer-events:auto;
+    transform:translate(-50%,-50%) scale(1);
+}
+
+/* PANEL WIDE (projects) */
+.panel-wide{
+    max-width:1100px;
+    width:92%;
+}
+
+/* CLOSE BUTTON */
+.close-btn{
+    position:absolute;
+    top:14px;
+    right:14px;
+    width:32px;height:32px;
+    border-radius:8px;
+    border:1px solid rgba(255,255,255,0.1);
+    background:rgba(255,255,255,0.05);
+    color:#8ea4c8;
+    font-size:16px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:0.2s;
+    z-index:10;
+}
+.close-btn:hover{
+    background:rgba(255,80,80,0.2);
+    border-color:rgba(255,80,80,0.3);
+    color:#ff6b6b;
+}
+
+/* PANEL HEADER */
+.panel-header{
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:3px;
+    color:#4d8dff;
+    text-transform:uppercase;
+}
+
+/* PROFILE PANEL */
+.profile-avatar{
+    width:140px;
+    height:140px;
+    object-fit:cover;
+    border-radius:50%;
+    border:3px solid rgba(47,124,255,0.4);
+    padding:4px;
+    background:#080c16;
+    align-self:center;
+    box-shadow:0 0 20px rgba(47,124,255,0.2);
+}
+
+.profile-name{
+    text-align:center;
+    font-size:22px;
+    font-weight:700;
+    background:linear-gradient(135deg,#6cb6ff,#a0d0ff);
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+    background-clip:text;
+}
+
+.profile-role{
+    text-align:center;
+    font-size:13px;
+    color:#4a6a90;
+    font-weight:500;
+    letter-spacing:1px;
+    margin-top:-8px;
+}
+
+.profile-bio{
+    font-size:14px;
+    line-height:1.7;
+    color:#c0d4ef;
+    background:rgba(47,124,255,0.05);
+    padding:16px;
+    border-radius:12px;
+    border:1px solid rgba(47,124,255,0.1);
+}
+
+.profile-stats{
+    display:flex;
+    gap:12px;
+    justify-content:center;
+}
+.stat-item{
+    text-align:center;
+    padding:10px 16px;
+    background:rgba(47,124,255,0.06);
+    border-radius:10px;
+    border:1px solid rgba(47,124,255,0.1);
+    flex:1;
+}
+.stat-num{
+    font-size:20px;
+    font-weight:700;
+    color:#6cb6ff;
+    font-family:'JetBrains Mono',monospace;
+}
+.stat-label{
+    font-size:10px;
+    color:#4a6a90;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    margin-top:2px;
+}
+
+.profile-links{
+    display:flex;
+    gap:10px;
+    justify-content:center;
+}
+.profile-link{
+    padding:8px 20px;
+    border-radius:10px;
+    border:1px solid rgba(47,124,255,0.2);
+    background:rgba(47,124,255,0.08);
+    color:#6cb6ff;
+    font-size:13px;
+    font-weight:500;
+    cursor:pointer;
+    transition:0.2s;
+    text-decoration:none;
+}
+.profile-link:hover{
+    background:rgba(47,124,255,0.2);
+    transform:translateY(-2px);
+}
+
+/* PROJECT GRID */
+.projects-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+    gap:20px;
+    overflow-y:auto;
+    max-height:calc(85vh - 100px);
+    padding:4px;
+    padding-right:8px;
+}
+.projects-grid::-webkit-scrollbar{width:6px;}
+.projects-grid::-webkit-scrollbar-track{background:transparent;}
+.projects-grid::-webkit-scrollbar-thumb{background:rgba(47,124,255,0.2);border-radius:3px;}
+
+.project-card{
+    background:rgba(10,16,32,0.9);
+    border:1.5px solid rgba(47,124,255,0.15);
+    border-radius:16px;
+    overflow:hidden;
+    transition:all 0.3s cubic-bezier(.4,0,.2,1);
+}
+.project-card:hover{
+    transform:translateY(-4px);
+    border-color:rgba(47,124,255,0.4);
+    box-shadow:0 8px 30px rgba(0,100,255,0.15);
+}
+
+.project-thumb{
+    height:160px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:linear-gradient(135deg,rgba(8,16,40,1),rgba(16,28,60,1));
+    color:#2d5a8e;
+    font-size:40px;
+    border-bottom:1px solid rgba(47,124,255,0.1);
+    position:relative;
+    overflow:hidden;
+}
+.project-thumb::after{
+    content:'';
+    position:absolute;
+    inset:0;
+    background:linear-gradient(135deg,transparent 40%,rgba(47,124,255,0.05));
+}
+
+.project-body{padding:18px;}
+
+.project-tag{
+    display:inline-block;
+    font-size:10px;
+    font-weight:600;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    color:#4d8dff;
+    background:rgba(47,124,255,0.1);
+    padding:4px 10px;
+    border-radius:6px;
+    margin-bottom:8px;
+}
+
+.project-title{
+    color:#c0d8ff;
+    font-size:18px;
+    font-weight:600;
+}
+
+.project-desc{
+    margin-top:8px;
+    color:#6a8ab0;
+    line-height:1.5;
+    font-size:13px;
+}
+
+.project-btn{
+    margin-top:14px;
+    width:100%;
+    border:none;
+    padding:10px;
+    border-radius:10px;
+    background:linear-gradient(135deg,#1a5cd8,#2f7cff);
+    color:white;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    transition:all 0.25s;
+    letter-spacing:0.5px;
+}
+.project-btn:hover{
+    background:linear-gradient(135deg,#2f7cff,#5ea0ff);
+    transform:scale(1.02);
+    box-shadow:0 4px 16px rgba(47,124,255,0.3);
+}
+
+/* CONTACT PANEL */
+.contact-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+}
+.contact-item{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:14px;
+    background:rgba(47,124,255,0.05);
+    border:1px solid rgba(47,124,255,0.1);
+    border-radius:12px;
+    cursor:pointer;
+    transition:0.2s;
+    text-decoration:none;
+    color:inherit;
+}
+.contact-item:hover{
+    background:rgba(47,124,255,0.12);
+    transform:translateY(-2px);
+}
+.contact-item.full{grid-column:1/-1;}
+.contact-icon{
+    width:38px;height:38px;
+    border-radius:10px;
+    background:rgba(47,124,255,0.12);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:18px;
+    flex-shrink:0;
+}
+.contact-label{
+    font-size:11px;
+    color:#4a6a90;
+    letter-spacing:0.5px;
+}
+.contact-value{
+    font-size:14px;
+    color:#a0c4ff;
+    font-weight:500;
+    margin-top:2px;
+}
+
+/* CV PANEL */
+.cv-section{
+    padding:16px;
+    background:rgba(47,124,255,0.04);
+    border:1px solid rgba(47,124,255,0.1);
+    border-radius:12px;
+}
+.cv-section-title{
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:2px;
+    color:#4d8dff;
+    text-transform:uppercase;
+    margin-bottom:12px;
+}
+.cv-item{
+    display:flex;
+    gap:12px;
+    padding:8px 0;
+    border-bottom:1px solid rgba(255,255,255,0.04);
+}
+.cv-item:last-child{border:none;}
+.cv-dot{
+    width:8px;height:8px;
+    border-radius:50%;
+    background:#2f7cff;
+    margin-top:6px;
+    flex-shrink:0;
+}
+.cv-item-title{font-size:14px;font-weight:600;color:#c0d8ff;}
+.cv-item-sub{font-size:12px;color:#4a6a90;margin-top:2px;}
+
+.cv-skills{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+}
+.cv-skill{
+    padding:6px 14px;
+    background:rgba(47,124,255,0.08);
+    border:1px solid rgba(47,124,255,0.15);
+    border-radius:20px;
+    font-size:12px;
+    color:#6cb6ff;
+    font-weight:500;
+}
+
+/* MOBILE */
+@media(max-width:768px){
+    .sidebar{
+        top:auto;
+        bottom:14px;
+        left:50%;
+        transform:translateX(-50%);
+        flex-direction:row;
+        gap:4px;
+        padding:6px;
+    }
+    .icon::after{
+        left:50%;
+        top:auto;
+        bottom:calc(100% + 10px);
+        transform:translateX(-50%) translateY(4px);
+    }
+    .icon:hover::after{
+        transform:translateX(-50%) translateY(0);
+    }
+    .title{font-size:11px;padding:6px 10px;}
+    .panel{width:95%;padding:20px;}
+    .contact-grid{grid-template-columns:1fr;}
+    .projects-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+
+<body>
+
+<!-- LOADER -->
+<div class="loader" id="loader">
+    <div class="loader-cube"></div>
+    <div class="loader-text">CUBE VIEWER</div>
+</div>
+
+<!-- GRID -->
+<div class="grid-overlay"></div>
+
+<!-- PARTICLES -->
+<canvas id="particles"></canvas>
+
+<!-- TITLE -->
+<div class="title">
+    <div class="title-dot"></div>
+    CUBE VIEWER
+</div>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+    <div class="icon" id="homeBtn" data-tip="Início">🏠</div>
+    <div class="icon" id="profileBtn" data-tip="Perfil">👤</div>
+    <div class="icon" id="cvBtn" data-tip="Currículo">📄</div>
+    <div class="icon" id="projectBtn" data-tip="Projetos">🧩</div>
+    <div class="icon" id="contactBtn" data-tip="Contacto">📞</div>
+</div>
+
+<!-- HUD -->
+<div class="hud" id="hud">
+    <span class="hud-label">ROT </span><span class="hud-val" id="hud-x">X: 0.00</span><br>
+    <span class="hud-label">ROT </span><span class="hud-val" id="hud-y">Y: 0.00</span><br>
+    <span class="hud-label">ROT </span><span class="hud-val" id="hud-z">Z: 0.00</span>
+</div>
+
+<!-- ZOOM -->
+<div class="zoom-indicator" id="zoomInd">ZOOM: 100%</div>
+
+<!-- OVERLAY -->
+<div class="overlay" id="overlay"></div>
+
+<!-- PROFILE PANEL -->
+<div class="panel" id="profilePanel">
+    <button class="close-btn" data-close="profilePanel">&times;</button>
+    <div class="panel-header">Perfil</div>
+    <img class="profile-avatar" src="imgs/eu82.png" alt="Gustavo">
+    <div class="profile-name">Gustavo Ildefonso Fernandes</div>
+    <div class="profile-role">Developer &amp; 3D Designer</div>
+    <div class="profile-stats">
+        <div class="stat-item">
+            <div class="stat-num">6+</div>
+            <div class="stat-label">Projetos</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-num">3</div>
+            <div class="stat-label">Linguagens</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-num">1</div>
+            <div class="stat-label">Anos</div>
+        </div>
+    </div>
+    <div class="profile-bio">
+        <b>Sobre mim</b><br><br>
+        Sou curioso pelo que gosto, pretendo melhorar as minhas
+        habilidades a cada dia. Gosto muito de ajudar pessoas
+        e criar projetos 3D e interfaces interativas no navegador.
+    </div>
+    <div class="profile-links">
+        <a class="profile-link" href="https://github.com/GustavoIF99" target="_blank">GitHub</a>
+        <a class="profile-link" href="#" id="goToContact">Contacto</a>
+    </div>
+</div>
+
+<!-- CV PANEL -->
+<div class="panel" id="cvPanel">
+    <button class="close-btn" data-close="cvPanel">&times;</button>
+    <div class="panel-header">Currículo</div>
+    <div class="profile-name" style="font-size:18px;">Gustavo Ildefonso Fernandes</div>
+    <div class="cv-section">
+        <div class="cv-section-title">Experiência</div>
+        <div class="cv-item">
+            <div class="cv-dot"></div>
+            <div>
+                <div class="cv-item-title">Desenvolvimento Web</div>
+                <div class="cv-item-sub">HTML, CSS, JavaScript &middot; Projetos pessoais</div>
+            </div>
+        </div>
+        <div class="cv-item">
+            <div class="cv-dot"></div>
+            <div>
+                <div class="cv-item-title">Design 3D &amp; Interfaces</div>
+                <div class="cv-item-sub">Canvas, WebGL &middot; Experiências visuais interativas</div>
+            </div>
+        </div>
+    </div>
+    <div class="cv-section">
+        <div class="cv-section-title">Educação</div>
+        <div class="cv-item">
+            <div class="cv-dot"></div>
+            <div>
+                <div class="cv-item-title">EPAD</div>
+                <div class="cv-item-sub">Formação em curso</div>
+            </div>
+        </div>
+    </div>
+    <div class="cv-section">
+        <div class="cv-section-title">Competências</div>
+        <div class="cv-skills">
+            <span class="cv-skill">HTML5</span>
+            <span class="cv-skill">CSS3</span>
+            <span class="cv-skill">JavaScript</span>
+            <span class="cv-skill">Canvas API</span>
+            <span class="cv-skill">3D Web</span>
+            <span class="cv-skill">UI/UX</span>
+            <span class="cv-skill">Git</span>
+            <span class="cv-skill">Design</span>
+        </div>
+    </div>
+</div>
+
+<!-- CONTACT PANEL -->
+<div class="panel" id="contactPanel">
+    <button class="close-btn" data-close="contactPanel">&times;</button>
+    <div class="panel-header">Contacto</div>
+    <div class="profile-name" style="font-size:18px;">Vamos conversar!</div>
+    <div class="contact-grid">
+        <a class="contact-item" href="mailto:aluno224085@epad.edu.pt">
+            <div class="contact-icon">📧</div>
+            <div>
+                <div class="contact-label">Email</div>
+                <div class="contact-value">aluno224085@epad.edu.pt</div>
+            </div>
+        </a>
+        <a class="contact-item" href="https://github.com/GustavoIF99" target="_blank">
+            <div class="contact-icon">💻</div>
+            <div>
+                <div class="contact-label">GitHub</div>
+                <div class="contact-value">GustavoIF99</div>
+            </div>
+        </a>
+        <div class="contact-item full">
+            <div class="contact-icon">📍</div>
+            <div>
+                <div class="contact-label">Localização</div>
+                <div class="contact-value">Portugal</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PROJECT PANEL -->
+<div class="panel panel-wide" id="projectPanel">
+    <button class="close-btn" data-close="projectPanel">&times;</button>
+    <div class="panel-header">Projetos</div>
+    <div class="projects-grid">
+
+        <div class="project-card">
+            <div class="project-thumb">🎮</div>
+            <div class="project-body">
+                <span class="project-tag">3D &middot; Canvas</span>
+                <div class="project-title">Cube Viewer</div>
+                <div class="project-desc">Website 3D com cubo interativo, partículas e HUD em tempo real.</div>
+                <button class="project-btn">Ver mais</button>
+            </div>
+        </div>
+
+        <div class="project-card">
+            <div class="project-thumb">🎨</div>
+            <div class="project-body">
+                <span class="project-tag">UI &middot; CSS</span>
+                <div class="project-title">Interface Futurista</div>
+                <div class="project-desc">Interface futurista em HTML/CSS com animações suaves e glassmorphism.</div>
+                <button class="project-btn">Ver mais</button>
+            </div>
+        </div>
+
+        <div class="project-card">
+            <div class="project-thumb">🖼️</div>
+            <div class="project-body">
+                <span class="project-tag">Visual &middot; JS</span>
+                <div class="project-title">Experiência Visual</div>
+                <div class="project-desc">Experiência visual interativa com canvas e efeitos de partículas.</div>
+                <button class="project-btn">Ver mais</button>
+            </div>
+        </div>
+
+        <div class="project-card">
+            <div class="project-thumb">📁</div>
+            <div class="project-body">
+                <span class="project-tag">Portfolio &middot; Web</span>
+                <div class="project-title">Portfolio Animado</div>
+                <div class="project-desc">Sistema de portfolio animado com transições e efeitos modernos.</div>
+                <button class="project-btn">Ver mais</button>
+            </div>
+        </div>
+
+        <div class="project-card">
+            <div class="project-thumb">✨</div>
+            <div class="project-body">
+                <span class="project-tag">Design &middot; CSS</span>
+                <div class="project-title">Design Moderno</div>
+                <div class="project-desc">Design moderno em CSS com gradientes, sombras e glassmorphism.</div>
+                <button class="project-btn">Ver mais</button>
+            </div>
+        </div>
+
+        <div class="project-card">
+            <div class="project-thumb">⚡</div>
+            <div class="project-body">
+                <span class="project-tag">Animação &middot; JS</span>
+                <div class="project-title">Sistema Animado</div>
+                <div class="project-desc">Sistema animado com JavaScript, física e interatividade.</div>
+                <button class="project-btn">Ver mais</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- MAIN CANVAS -->
+<canvas id="c"></canvas>
+
+<script>
+/* ============ LOADER ============ */
+window.addEventListener('load', () => {
+    setTimeout(() => document.getElementById('loader').classList.add('hide'), 800);
+});
+
+/* ============ PARTICLES ============ */
+const pc = document.getElementById('particles');
+const pctx = pc.getContext('2d');
+let particles = [];
+
+function initParticles() {
+    pc.width = innerWidth;
+    pc.height = innerHeight;
+    particles = [];
+    const count = Math.min(Math.floor((innerWidth * innerHeight) / 12000), 120);
+    for (let i = 0; i < count; i++) {
+        particles.push({
+            x: Math.random() * pc.width,
+            y: Math.random() * pc.height,
+            r: Math.random() * 1.5 + 0.5,
+            dx: (Math.random() - 0.5) * 0.3,
+            dy: (Math.random() - 0.5) * 0.3,
+            a: Math.random() * 0.4 + 0.1
+        });
+    }
+}
+initParticles();
+
+function drawParticles() {
+    pctx.clearRect(0, 0, pc.width, pc.height);
+    particles.forEach(p => {
+        p.x += p.dx;
+        p.y += p.dy;
+        if (p.x < 0) p.x = pc.width;
+        if (p.x > pc.width) p.x = 0;
+        if (p.y < 0) p.y = pc.height;
+        if (p.y > pc.height) p.y = 0;
+
+        pctx.beginPath();
+        pctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        pctx.fillStyle = `rgba(47,124,255,${p.a})`;
+        pctx.fill();
+    });
+
+    // connections
+    for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+            const dx = particles[i].x - particles[j].x;
+            const dy = particles[i].y - particles[j].y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 120) {
+                pctx.beginPath();
+                pctx.moveTo(particles[i].x, particles[i].y);
+                pctx.lineTo(particles[j].x, particles[j].y);
+                pctx.strokeStyle = `rgba(47,124,255,${0.06 * (1 - dist / 120)})`;
+                pctx.stroke();
+            }
+        }
+    }
+    requestAnimationFrame(drawParticles);
+}
+drawParticles();
+
+/* ============ CUBE ============ */
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+canvas.width = innerWidth;
+canvas.height = innerHeight;
+
+let rx = 0.4, ry = 0.6;
+let dragging = false;
+let lx = 0, ly = 0;
+let autoRotate = true;
+let zoom = 300;
+const MIN_ZOOM = 150, MAX_ZOOM = 600;
+
+const cube = [
+    {x:-1,y:-1,z:-1},{x:1,y:-1,z:-1},{x:1,y:1,z:-1},{x:-1,y:1,z:-1},
+    {x:-1,y:-1,z:1},{x:1,y:-1,z:1},{x:1,y:1,z:1},{x:-1,y:1,z:1}
+];
+
+const edges = [
+    [0,1],[1,2],[2,3],[3,0],
+    [4,5],[5,6],[6,7],[7,4],
+    [0,4],[1,5],[2,6],[3,7]
+];
+
+const faces = [
+    {verts:[0,1,2,3], color:'rgba(47,124,255,0.06)'},  // back
+    {verts:[4,5,6,7], color:'rgba(47,124,255,0.06)'},  // front
+    {verts:[0,1,5,4], color:'rgba(47,124,255,0.04)'},  // bottom
+    {verts:[2,3,7,6], color:'rgba(47,124,255,0.04)'},  // top
+    {verts:[0,3,7,4], color:'rgba(47,124,255,0.05)'},  // left
+    {verts:[1,2,6,5], color:'rgba(47,124,255,0.05)'},  // right
+];
+
+const axes = [
+    {a:{x:0,y:0,z:0}, b:{x:2.2,y:0,z:0}, c:'#ff4455', label:'X'},
+    {a:{x:0,y:0,z:0}, b:{x:0,y:2.2,z:0}, c:'#44ff66', label:'Y'},
+    {a:{x:0,y:0,z:0}, b:{x:0,y:0,z:2.2}, c:'#4488ff', label:'Z'}
+];
+
+function rot(p) {
+    let {x, y, z} = p;
+    const cy = Math.cos(ry), sy = Math.sin(ry);
+    const x1 = x * cy - z * sy;
+    const z1 = x * sy + z * cy;
+    const cx = Math.cos(rx), sx = Math.sin(rx);
+    const y1 = y * cx - z1 * sx;
+    const z2 = y * sx + z1 * cx;
+    return {x: x1, y: y1, z: z2};
+}
+
+function proj(p) {
+    const f = zoom / (4 - p.z);
+    return {x: p.x * f + canvas.width / 2, y: p.y * f + canvas.height / 2};
+}
+
+function drawLine(a, b, color, width) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width || 1.5;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (autoRotate && !dragging) {
+        ry += 0.004;
+        rx += 0.002;
+    }
+
+    const pts3d = cube.map(p => rot(p));
+    const pts = pts3d.map(p => proj(p));
+
+    // draw faces
+    faces.forEach(face => {
+        ctx.beginPath();
+        const fp = face.verts.map(i => pts[i]);
+        ctx.moveTo(fp[0].x, fp[0].y);
+        for (let i = 1; i < fp.length; i++) ctx.lineTo(fp[i].x, fp[i].y);
+        ctx.closePath();
+        ctx.fillStyle = face.color;
+        ctx.fill();
+    });
+
+    // draw edges with glow
+    ctx.shadowColor = '#2f7cff';
+    ctx.shadowBlur = 8;
+    edges.forEach(e => {
+        drawLine(pts[e[0]], pts[e[1]], 'rgba(120,180,255,0.7)', 1.5);
+    });
+    ctx.shadowBlur = 0;
+
+    // draw vertices
+    pts.forEach((p, i) => {
+        const depth = (pts3d[i].z + 1) / 2;
+        const size = 2.5 + depth * 1.5;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(120,180,255,${0.5 + depth * 0.5})`;
+        ctx.fill();
+    });
+
+    // draw axes
+    axes.forEach(ax => {
+        const a = proj(rot(ax.a));
+        const b = proj(rot(ax.b));
+        ctx.shadowColor = ax.c;
+        ctx.shadowBlur = 6;
+        drawLine(a, b, ax.c, 2);
+        ctx.shadowBlur = 0;
+
+        // axis label
+        ctx.font = '600 11px "JetBrains Mono"';
+        ctx.fillStyle = ax.c;
+        ctx.fillText(ax.label, b.x + 6, b.y - 6);
+    });
+
+    // HUD
+    document.getElementById('hud-x').textContent = 'X: ' + ry.toFixed(2);
+    document.getElementById('hud-y').textContent = 'Y: ' + rx.toFixed(2);
+    document.getElementById('hud-z').textContent = 'Z: 0.00';
+
+    requestAnimationFrame(draw);
+}
+draw();
+
+/* ============ INTERACTIONS ============ */
+canvas.onmousedown = e => {
+    dragging = true;
+    autoRotate = false;
+    lx = e.clientX;
+    ly = e.clientY;
+};
+window.onmouseup = () => { dragging = false; };
+window.onmousemove = e => {
+    if (!dragging) return;
+    ry += (e.clientX - lx) * 0.008;
+    rx += (e.clientY - ly) * 0.008;
+    lx = e.clientX;
+    ly = e.clientY;
+};
+
+// touch support
+canvas.ontouchstart = e => {
+    dragging = true;
+    autoRotate = false;
+    lx = e.touches[0].clientX;
+    ly = e.touches[0].clientY;
+};
+window.ontouchend = () => { dragging = false; };
+window.ontouchmove = e => {
+    if (!dragging) return;
+    ry += (e.touches[0].clientX - lx) * 0.008;
+    rx += (e.touches[0].clientY - ly) * 0.008;
+    lx = e.touches[0].clientX;
+    ly = e.touches[0].clientY;
+};
+
+// zoom
+window.addEventListener('wheel', e => {
+    zoom -= e.deltaY * 0.5;
+    zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom));
+    document.getElementById('zoomInd').textContent = 'ZOOM: ' + Math.round(zoom / 3) + '%';
+}, {passive: true});
+
+// resize
+window.onresize = () => {
+    canvas.width = innerWidth;
+    canvas.height = innerHeight;
+    initParticles();
+};
+
+/* ============ PANELS ============ */
+const overlay = document.getElementById('overlay');
+const allPanels = ['profilePanel', 'cvPanel', 'contactPanel', 'projectPanel'];
+const allIcons = {
+    profileBtn: 'profilePanel',
+    cvBtn: 'cvPanel',
+    contactBtn: 'contactPanel',
+    projectBtn: 'projectPanel'
+};
+
+function closeAll() {
+    overlay.classList.remove('show');
+    allPanels.forEach(id => document.getElementById(id).classList.remove('show'));
+    document.querySelectorAll('.sidebar .icon').forEach(i => i.classList.remove('active'));
+}
+
+function openPanel(panelId, btnId) {
+    const panel = document.getElementById(panelId);
+    const isOpen = panel.classList.contains('show');
+    closeAll();
+    if (!isOpen) {
+        overlay.classList.add('show');
+        panel.classList.add('show');
+        if (btnId) document.getElementById(btnId).classList.add('active');
+    }
+}
+
+// sidebar buttons
+Object.entries(allIcons).forEach(([btnId, panelId]) => {
+    document.getElementById(btnId).onclick = () => openPanel(panelId, btnId);
+});
+
+document.getElementById('homeBtn').onclick = () => {
+    closeAll();
+    autoRotate = true;
+    document.getElementById('homeBtn').classList.add('active');
+    setTimeout(() => document.getElementById('homeBtn').classList.remove('active'), 400);
+};
+
+// close buttons
+document.querySelectorAll('.close-btn').forEach(btn => {
+    btn.onclick = () => closeAll();
+});
+
+// overlay click
+overlay.onclick = () => closeAll();
+
+// keyboard
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeAll();
+});
+
+// "Contacto" link inside profile
+document.getElementById('goToContact').onclick = e => {
+    e.preventDefault();
+    openPanel('contactPanel', 'contactBtn');
+};
+
+// double click to reset
+canvas.ondblclick = () => {
+    rx = 0.4;
+    ry = 0.6;
+    zoom = 300;
+    autoRotate = true;
+    document.getElementById('zoomInd').textContent = 'ZOOM: 100%';
+};
+</script>
+
+</body>
+</html>
