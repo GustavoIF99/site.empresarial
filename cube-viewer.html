@@ -564,6 +564,159 @@ canvas:active{cursor:grabbing;}
     font-weight:500;
 }
 
+/* CV AVATAR */
+.cv-avatar{
+    width:100px;
+    height:100px;
+    object-fit:cover;
+    border-radius:50%;
+    border:2px solid rgba(47,124,255,0.35);
+    padding:3px;
+    background:#080c16;
+    align-self:center;
+    box-shadow:0 0 16px rgba(47,124,255,0.15);
+}
+
+/* LANGUAGE BARS */
+.lang-item{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:8px 0;
+}
+.lang-flag{
+    font-size:22px;
+    width:32px;
+    text-align:center;
+}
+.lang-info{
+    flex:1;
+}
+.lang-name{
+    font-size:13px;
+    font-weight:600;
+    color:#c0d8ff;
+    margin-bottom:6px;
+    display:flex;
+    justify-content:space-between;
+}
+.lang-level-text{
+    font-size:11px;
+    color:#4d8dff;
+    font-weight:500;
+}
+.lang-bar{
+    width:100%;
+    height:6px;
+    background:rgba(47,124,255,0.1);
+    border-radius:3px;
+    overflow:hidden;
+}
+.lang-fill{
+    height:100%;
+    border-radius:3px;
+    background:linear-gradient(90deg,#2f7cff,#6cb6ff);
+    transition:width 1s cubic-bezier(.4,0,.2,1);
+}
+
+/* CONTACT ENHANCED */
+.contact-hero{
+    text-align:center;
+    padding:20px 0 8px;
+}
+.contact-hero-title{
+    font-size:24px;
+    font-weight:700;
+    background:linear-gradient(135deg,#6cb6ff,#a0d0ff);
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+    background-clip:text;
+}
+.contact-hero-sub{
+    font-size:13px;
+    color:#4a6a90;
+    margin-top:6px;
+}
+.contact-card{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:16px;
+    background:rgba(47,124,255,0.05);
+    border:1px solid rgba(47,124,255,0.12);
+    border-radius:14px;
+    cursor:pointer;
+    transition:all 0.25s cubic-bezier(.4,0,.2,1);
+    text-decoration:none;
+    color:inherit;
+}
+.contact-card:hover{
+    background:rgba(47,124,255,0.15);
+    transform:translateY(-3px);
+    box-shadow:0 6px 20px rgba(47,124,255,0.15);
+    border-color:rgba(47,124,255,0.3);
+}
+.contact-card-icon{
+    width:46px;height:46px;
+    border-radius:12px;
+    background:linear-gradient(135deg,rgba(47,124,255,0.15),rgba(47,124,255,0.08));
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:22px;
+    flex-shrink:0;
+}
+.contact-card-label{
+    font-size:11px;
+    color:#4a6a90;
+    letter-spacing:0.5px;
+    text-transform:uppercase;
+    font-weight:600;
+}
+.contact-card-value{
+    font-size:15px;
+    color:#a0c4ff;
+    font-weight:500;
+    margin-top:3px;
+}
+.contact-cards{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+}
+.contact-divider{
+    width:60px;
+    height:2px;
+    background:linear-gradient(90deg,transparent,rgba(47,124,255,0.3),transparent);
+    align-self:center;
+    margin:4px 0;
+}
+.contact-cta{
+    display:block;
+    text-align:center;
+    padding:14px;
+    border-radius:12px;
+    background:linear-gradient(135deg,#1a5cd8,#2f7cff);
+    color:white;
+    font-size:14px;
+    font-weight:600;
+    text-decoration:none;
+    transition:all 0.25s;
+    letter-spacing:0.5px;
+    box-shadow:0 4px 16px rgba(47,124,255,0.25);
+}
+.contact-cta:hover{
+    background:linear-gradient(135deg,#2f7cff,#5ea0ff);
+    transform:scale(1.02);
+    box-shadow:0 6px 24px rgba(47,124,255,0.35);
+}
+.contact-footer{
+    text-align:center;
+    font-size:12px;
+    color:#3a5a80;
+    font-style:italic;
+}
+
 /* MOBILE */
 @media(max-width:768px){
     .sidebar{
@@ -670,6 +823,7 @@ canvas:active{cursor:grabbing;}
 <div class="panel" id="cvPanel">
     <button class="close-btn" data-close="cvPanel">&times;</button>
     <div class="panel-header">Currículo</div>
+    <img class="cv-avatar" src="imgs/eur.png" alt="Gustavo">
     <div class="profile-name" style="font-size:18px;">Gustavo Ildefonso Fernandes</div>
     <div class="cv-section">
         <div class="cv-section-title">Experiência</div>
@@ -685,6 +839,30 @@ canvas:active{cursor:grabbing;}
             <div>
                 <div class="cv-item-title">Design 3D &amp; Interfaces</div>
                 <div class="cv-item-sub">Canvas, WebGL &middot; Experiências visuais interativas</div>
+            </div>
+        </div>
+    </div>
+    <div class="cv-section">
+        <div class="cv-section-title">Idiomas</div>
+        <div class="lang-item">
+            <div class="lang-flag">🇵🇹</div>
+            <div class="lang-info">
+                <div class="lang-name">Português <span class="lang-level-text">Nativo</span></div>
+                <div class="lang-bar"><div class="lang-fill" style="width:100%"></div></div>
+            </div>
+        </div>
+        <div class="lang-item">
+            <div class="lang-flag">🇬🇧</div>
+            <div class="lang-info">
+                <div class="lang-name">Inglês <span class="lang-level-text">Intermédio</span></div>
+                <div class="lang-bar"><div class="lang-fill" style="width:60%"></div></div>
+            </div>
+        </div>
+        <div class="lang-item">
+            <div class="lang-flag">🇪🇸</div>
+            <div class="lang-info">
+                <div class="lang-name">Espanhol <span class="lang-level-text">Básico</span></div>
+                <div class="lang-bar"><div class="lang-fill" style="width:35%"></div></div>
             </div>
         </div>
     </div>
@@ -717,30 +895,51 @@ canvas:active{cursor:grabbing;}
 <div class="panel" id="contactPanel">
     <button class="close-btn" data-close="contactPanel">&times;</button>
     <div class="panel-header">Contacto</div>
-    <div class="profile-name" style="font-size:18px;">Vamos conversar!</div>
-    <div class="contact-grid">
-        <a class="contact-item" href="mailto:aluno224085@epad.edu.pt">
-            <div class="contact-icon">📧</div>
+    <div class="contact-hero">
+        <div class="contact-hero-title">Vamos trabalhar juntos?</div>
+        <div class="contact-hero-sub">Estou disponível para projetos, colaborações e novas oportunidades.</div>
+    </div>
+    <div class="contact-divider"></div>
+    <div class="contact-cards">
+        <a class="contact-card" href="mailto:aluno224085@epad.edu.pt">
+            <div class="contact-card-icon">📧</div>
             <div>
-                <div class="contact-label">Email</div>
-                <div class="contact-value">aluno224085@epad.edu.pt</div>
+                <div class="contact-card-label">Email</div>
+                <div class="contact-card-value">aluno224085@epad.edu.pt</div>
             </div>
         </a>
-        <a class="contact-item" href="https://github.com/GustavoIF99" target="_blank">
-            <div class="contact-icon">💻</div>
+        <a class="contact-card" href="https://github.com/GustavoIF99" target="_blank">
+            <div class="contact-card-icon">💻</div>
             <div>
-                <div class="contact-label">GitHub</div>
-                <div class="contact-value">GustavoIF99</div>
+                <div class="contact-card-label">GitHub</div>
+                <div class="contact-card-value">GustavoIF99</div>
             </div>
         </a>
-        <div class="contact-item full">
-            <div class="contact-icon">📍</div>
+        <a class="contact-card" href="https://www.instagram.com/" target="_blank">
+            <div class="contact-card-icon">📸</div>
             <div>
-                <div class="contact-label">Localização</div>
-                <div class="contact-value">Portugal</div>
+                <div class="contact-card-label">Instagram</div>
+                <div class="contact-card-value">@gustavo</div>
+            </div>
+        </a>
+        <div class="contact-card">
+            <div class="contact-card-icon">📍</div>
+            <div>
+                <div class="contact-card-label">Localização</div>
+                <div class="contact-card-value">Portugal</div>
+            </div>
+        </div>
+        <div class="contact-card">
+            <div class="contact-card-icon">🕐</div>
+            <div>
+                <div class="contact-card-label">Disponibilidade</div>
+                <div class="contact-card-value">Disponível para projetos</div>
             </div>
         </div>
     </div>
+    <div class="contact-divider"></div>
+    <a class="contact-cta" href="mailto:aluno224085@epad.edu.pt">Enviar Email</a>
+    <div class="contact-footer">Respondo normalmente em 24 horas</div>
 </div>
 
 <!-- PROJECT PANEL -->
